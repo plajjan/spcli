@@ -1,0 +1,9 @@
+
+* operational and configure mode (we implement)
+
+* must support having user-specified functions bound to '?' and <tab>
+* must support multi-line prompt, ie to have something like in JUNOS
+	 [ edit protocols bgp ]
+	username@box# 
+
+* different history modes (ie, if we are in operatioanl or configure mode)

@@ -1,0 +1,32 @@
+#!/usr/bin/python
+# vim: foldmethod=marker :
+
+import atexit
+import cli
+import os
+import sys
+
+def loadModules(): #{{{
+	try:
+		import readline
+	except:
+		print "ERROR: Module readline not available."
+		sys.exit(1)
+
+	try:
+		import cli
+	except:
+		print "ERROR: Module cli not available."
+#}}}
+
+def exitHandler():
+	pass
+
+loadModules()
+
+atexit.register(exitHandler)
+
+c = cli.Cli()
+#c.prompt = "test> "
+c.loop()
+
