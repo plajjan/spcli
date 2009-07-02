@@ -34,6 +34,11 @@ class Cli:
     ct_config.append("status")
 
     tree_config = [
+            {   # abort (abort the current transaction
+                'tree_type' : 'branch',
+                'name'      : 'abort',
+                'shorthelp' : 'Abort the current transaction'
+            },
             {   # delete
                 'tree_type' : 'branch',
                 'name'      : 'delete',
@@ -84,7 +89,8 @@ class Cli:
                 {   # configure
                     'tree_type' : 'branch',
                     'name'      : 'configure',
-                    'command'   : 'self.mode_configure()'
+                    'command'   : 'self.mode_configure()',
+                    'shorthelp' : 'Enter configuration mode'
                 },
                 {   # exit
                     'tree_type' : 'branch',
@@ -130,6 +136,11 @@ class Cli:
                                 }
                             ]
                 },
+                {   # show
+                    'tree_type' : 'branch',
+                    'name'      : 'show',
+                    'shorthelp' : 'Show information'
+                },
                 {   # traceroute
                     'tree_type' : 'branch',
                     'name'      : 'traceroute',
@@ -153,17 +164,9 @@ class Cli:
 
     def __init__(self):
         import sys
-#        if stdin is not None:
-#            self.stdin = stdin
-#        else:
         self.stdin = sys.stdin
-
-#        if stdout is not None:
-#            self.stdout = stdout
-#        else:
         self.stdout = sys.stdout
 
-#        self.prompt = "prompt> "
         self.prompt_update()
 
     def exit(self): # {{{
@@ -293,6 +296,7 @@ class Cli:
     # }}}
 
     def tab_print(self, matches, num_matches, max_length): # {{{
+        print "in tab_print"
         import readline
         import re
         txt = readline.get_line_buffer()
@@ -315,6 +319,14 @@ class Cli:
         raw_txt = readline.get_line_buffer()
         txt = raw_txt[0:-1]
         tokens = txt.split()
+
+        try:
+            last_token = tokens[-1]
+        except:
+            last_token = ""
+        if txt[-1:] == ' ':
+            last_token = ""
+
         if len(tokens) > 0 and txt[-1:] != ' ':
             tokens.pop()
         all_tokens = copy(tokens)
@@ -324,9 +336,7 @@ class Cli:
         else:
             data = self.traverse(self.tree_config, 1, tokens, all_tokens)
 
-#        print "DATA:", data
-
-        self.rprint("\n")
+        self.rprint("\nPossible completions:\n")
         for ii in num_matches:
             if ii[-1] == ' ':
                 i = ii.rsplit()[0]
@@ -334,6 +344,8 @@ class Cli:
                 i = ii
 
             for obj in data:
+                if obj['name'][0:len(last_token)] != last_token:
+                    continue
                 if obj['name'] == i:
                     try:
                         line = "  %-15s %s\n" % (i, obj['shorthelp'])
@@ -435,7 +447,7 @@ class Cli:
 
 
         # don't append 'value' types to tab-completion
-        # ie, 'ping ttl <value>' should have '<value>' be completed
+        # ie, 'ping ttl <value>' should not have '<value>' be completed
         ac = []
         for obj in data:
             if obj['tree_type'] != 'value':
@@ -451,8 +463,10 @@ class Cli:
         """ 4) Match it up with whatever the user might already have written
         """
         for val in ac:
-            if val.find(text) != -1:
-                pc.append(val + " ")
+            if val[0:len(text)] == text:
+                pc.append(val)
+#            if val.find(text) != -1:
+#                pc.append(val + " ")
 
         try:
             return pc[state]
