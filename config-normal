@@ -1,0 +1,253 @@
+## Last commit: 2010-03-16 10:01:12 UTC by kll
+version 9.2R2.15;
+/* testsson */
+system {
+    host-name STH2-CORE-1;
+    no-redirects;
+    internet-options {
+        path-mtu-discovery;
+    }
+    authentication-order [ tacplus password ];
+    location country-code SE;
+    root-authentication {
+        encrypted-password "$1$fQVlXpN.$t0xXAS0JQMOwOaLCMiFAw/"; ## SECRET-DATA
+    }
+    name-server {
+        195.182.5.3;
+    }
+    tacplus-server {
+        195.182.5.57 {
+            secret "$9$7dNVsJZDq.foJ.5TFtp7-dsaZqmf5Q31RX-VwJZTQFnA0"; ## SECRET-DATA
+            source-address 195.182.5.239;
+        }
+    }
+    login {
+        announcement "    Device    : STH7 \n    Country   : SE\n    Site      : Bahnhof hall St. Erik\n    Location  : labbracket\n    Notes     : JUNIPAHS FTW\n";
+        user kll {
+            uid 2006;
+            class super-user;
+            authentication {
+                encrypted-password "$1$Kyj5KnEW$jJk6maSjB/GKd31.ue8Tx1"; ## SECRET-DATA
+            }
+        }
+        user rickard {
+            uid 2008;
+            class super-user;
+            authentication {
+                encrypted-password "$1$hvxWXJ/4$cIxsvxKKsC9ZcI05gZKkd1"; ## SECRET-DATA
+            }
+        }
+    }
+    services {
+        ssh;
+        telnet;
+    }
+    syslog {
+        archive files 100;
+        user * {
+            any emergency;
+        }
+        host 195.182.5.57 {
+            any notice;
+            authorization info;
+        }
+        file messages {
+            any notice;
+            authorization info;
+        }
+        file interactive-commands {
+            interactive-commands any;
+        }
+        /* KLLs test */
+        file test {
+            interactive-commands notice;
+        }
+        time-format year millisecond;
+        source-address 195.182.5.239;
+    }
+}
+chassis {
+    no-source-route; ## Warning: 'source-route' is deprecated
+    aggregated-devices {
+        ethernet {
+            device-count 20;
+        }
+    }
+}
+interfaces {
+    fe-0/3/0 {
+        unit 0 {
+            family inet {
+                address 195.182.5.227/31;
+            }
+            family iso;
+        }
+    }
+    fe-0/3/1 {
+        vlan-tagging;
+        unit 10 {
+            description "Management for STH-SW2";
+            vlan-id 10;
+            family inet {
+                address 195.182.5.229/30;
+            }
+        }
+    }
+    fe-0/3/11 {
+        description "Tele2 - AVK-CORE-2";
+        unit 0 {
+            family inet {
+                address 130.244.200.186/30;
+            }
+            family inet6 {
+                address 2a00:800:752:10::5:2/112;
+            }
+        }
+    }
+    lo0 {
+        unit 0 {
+            family inet {
+                address 195.182.5.239/32;
+            }
+            family iso {
+                address 39.752f.0100.0000.0000.0040.1951.8200.5239.00;
+            }
+        }
+    }
+}
+snmp {
+    community BD3zfgybvetpzTf {
+        clients {
+            195.182.5.40/32;
+        }
+    }
+}
+routing-options {
+    ppm {
+        delegate-processing;
+    }
+    rib inet6.0 {
+        static {
+            route 2a00:801:f1::/48 {
+                discard;
+                community [ 2863:3 2863:2000 2863:5000 ];
+            }
+            route 2a00:801:f1::666/128 discard;
+        }
+    }
+    static {
+        route 0.0.0.0/0 next-hop 130.244.200.185;
+        route 192.0.2.0/24 {
+            discard;
+            install;
+        }
+        route 130.244.0.31/32 next-hop 130.244.200.185;
+    }
+    autonomous-system 39525;
+}
+/* bgp */
+protocols {
+    /* afdasdfasdfasdfsafd */
+    bgp {
+        local-as 39525;
+        group IPV6-TELE2 {
+            import TELE2-IN;
+            family inet6 {
+                unicast;
+            }
+            export TELE2-OUT;
+            peer-as 1257;
+            neighbor 2a00:800:752:10::5:1;
+        }
+        group IBGP {
+            type internal;
+            family inet {
+                unicast;
+            }
+            authentication-key "$9$cZOylMN-w4aGevZUDHTQrev8LNbwgoZD0Bv8x-sYn69ABEylM8x-ApMLNboa"; ## SECRET-DATA
+            peer-as 39525;
+            neighbor 195.182.5.248;
+        }
+        /* Den har gar till Tele2 */
+        group IPV4-TELE2 {
+            import TELE2-IN;
+            family inet {
+                unicast;
+            }
+            authentication-key "$9$RZQSlvY2aiqmAplvLX-dZGDHPT/9tuOIdbQ39CB1"; ## SECRET-DATA
+            peer-as 1257;
+            neighbor 130.244.200.185;
+        }
+        group PEERS {
+            export TELE2-IN;
+            neighbor 1.3.3.7 {
+                description "Global Crossing";
+                export [ TELE2-OUT TELE2-IN ];
+                peer-as 1337;
+            }
+        }
+    }
+    isis {
+        spf-delay 50; ## Warning: 'spf-delay' is deprecated
+        level 1 disable;
+        level 2 {
+            authentication-key "$9$SCcrvLaJDmfzwY.5zFAtevWX-wJZjfT3"; ## SECRET-DATA
+            authentication-type md5;
+            wide-metrics-only;
+        }
+        interface fe-0/3/0.0 {
+            point-to-point;
+            level 2 {
+                metric 10;
+                hello-authentication-key "$9$Tz6AleW-VYRhNbY2GU369tOReK8Vwg"; ## SECRET-DATA
+                hello-authentication-type md5;
+            }
+        }
+        interface fe-0/3/11.0 {
+            passive;
+        }
+        interface lo0.0 {
+            passive;
+        }
+    }
+}
+policy-options {
+    policy-statement TELE2-IN {
+        then {
+            metric 1000;
+            local-preference 200;
+            accept;
+        }
+    }
+    policy-statement TELE2-OUT {
+        term SPRITELINK {
+            from community SPLN-ANNOUNCE-TO-ALL;
+            then {
+                metric 1000;
+                accept;
+            }
+        }
+        then reject;
+    }
+    community SPLN-ANNOUNCE-TO-ALL members [ 2863:5000 39525:10000 ];
+    community SPLN-PROPAGATE-TO-ALL members 2863:2000;
+    community bajs members [ 1239:321 1257:90 123:123 ];
+}
+services {
+    rpm {
+        probe kll {
+            test ping.sunet.se {
+                target address 192.36.125.18;
+                data-size 20;
+            }
+            test warp9.tele2.net {
+                probe-type icmp-ping-timestamp;
+                target address 90.130.66.198;
+                probe-count 15;
+                probe-interval 1;
+                test-interval 0;
+                history-size 255;
+            }
+        }
+    }
+}

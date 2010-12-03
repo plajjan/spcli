@@ -13,10 +13,26 @@ TODO:   set the standard for branch / leaf / leaf-bool and so forth
 TODO:   introduce hidden nodes
 """
 
+import threading
+from twisted.web.xmlrpc import Proxy
+from twisted.internet import reactor, threads, defer
+import Queue
 
-class Cli:
+
+class Backend(threading.Thread):
+    def __init__(self, queue):
+        self.__queue = queue
+        threading.Thread.__init__(self)
+
+    def run(self):
+        pass
+
+class Cli(): # {{{
+    queue = Queue.Queue(0)
     use_rawinput = 1
     stop = None
+
+    proxy = None
 
     mode = 'operational'
 
@@ -33,7 +49,7 @@ class Cli:
     ct_config.append("set")
     ct_config.append("status")
 
-    tree_config = [
+    tree_config = [ # {{{
             {   # abort (abort the current transaction
                 'tree_type' : 'branch',
                 'name'      : 'abort',
@@ -64,8 +80,8 @@ class Cli:
                 'name'      : 'set'
             }
         ]
-
-    tree_configuration = [
+    # }}}
+    tree_configuration = [ # {{{
                 {   # firewall
                     'tree_type' : 'branch',
                     'name'      : 'firewall'
@@ -84,8 +100,8 @@ class Cli:
                     'name': 'system'
                 }
             ]
-
-    tree_operational =   [
+    # }}}
+    tree_operational =   [ # {{{
                 {   # configure
                     'tree_type' : 'branch',
                     'name'      : 'configure',
@@ -144,7 +160,16 @@ class Cli:
                 {   # traceroute
                     'tree_type' : 'branch',
                     'name'      : 'traceroute',
-                    'shorthelp' : 'trace the path to a host'
+                    'command'   : 'self.traceroute(tokens)',
+                    'shorthelp' : 'trace the path to a host',
+                    'kids': [
+                                {   # host
+                                    'tree_type' : 'value',
+                                    'name'      : '<host>',
+                                    'value_type': [ 'host', 'ip', 'ip6' ],
+                                    'shorthelp' : 'Hostname or IP(v6) address of remote host'
+                                }
+                            ]
                 },
                 {   # quit
                     'tree_type' : 'branch',
@@ -153,21 +178,16 @@ class Cli:
                     'shorthelp' : 'Log out from the CLI / router'
                 }
             ]
+    # }}}
 
 
-
-    try:
-        from copy import copy
-    except ImportError:
-        print "Unable to import 'copy' library, exiting..."
-        sys.exit(1)
-
-    def __init__(self):
+    def __init__(self): # {{{
         import sys
         self.stdin = sys.stdin
         self.stdout = sys.stdout
 
         self.prompt_update()
+    # }}}
 
     def exit(self): # {{{
         import sys
@@ -195,14 +215,14 @@ class Cli:
             print "Entering configuration mode"
             self.mode = 'configure'
             self.prompt_update()
-# }}}
+    # }}}
 
-    def mode_operational(self): #{{{
+    def mode_operational(self): # {{{
         if self.mode == 'configure':
             print "Exiting configuration mode"
             self.mode = 'operational'
             self.prompt_update()
-# }}}
+    # }}}
 
     def pre_input_hook(self): # {{{
         pass
@@ -215,7 +235,9 @@ class Cli:
         self.stdout.flush()
     # }}}
     
-    def loop(self): #{{{
+    def run(self): # {{{
+        Backend(self.queue).start()
+
         if self.use_rawinput:
             try:
                 import readline
@@ -259,7 +281,11 @@ class Cli:
                     readline.set_completer(self.old_completer)
                 except ImportError:
                     pass
-# }}}
+    # }}}
+
+    def ping(self, value):
+        print "TJOHEJ!"
+        return
 
     def evalcmd(self, opt_line): # {{{
         from copy import copy
@@ -268,10 +294,20 @@ class Cli:
         tokens = line.split()
         all_tokens = copy(tokens)
 
+        if line == '':
+            return
+
+        if opt_line == 'ping':
+            print "TJOHEJSAN!"
+#            threads.blockingCallFromThread(reactor, self.runFunc, 'echo', 'test')
+            self.nrun()
+
         if self.mode == 'operational':
             data = self.traverse(self.tree_operational, 1, tokens, all_tokens)
         else:
             data = self.traverse(self.tree_config, 1, tokens, all_tokens)
+
+        print "Data", data['command']
 
         try:
             command = data['command']
@@ -280,6 +316,7 @@ class Cli:
         else:
             eval(data['command'])
     # }}}
+
 
     def precmd(self, line): # {{{
         """
@@ -474,3 +511,26 @@ class Cli:
             return None
     # }}}
 
+
+
+
+    def runFunc(self, function, *args):
+        self.proxy.callRemote(function, args).addCallbacks(self.printValue, self.printError)
+
+    def printValue(self, value):
+        print "nu aer vi i printValue!"
+        print repr(value)
+        reactor.stop()
+        return
+
+    def printError(self, value):
+        print 'error:', value
+        reactor.stop()
+
+    def nrun(self):
+        from twisted.internet import reactor
+        self.proxy = Proxy('http://127.0.0.1:29999/XMLRPC')
+        self.proxy.callRemote('echo', 'foo').addCallbacks(self.printValue, self.printError)
+        reactor.run(installSignalHandlers=0)
+
+# }}}

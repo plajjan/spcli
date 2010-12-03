@@ -12,11 +12,11 @@ if string.find(os.path.abspath(sys.argv[0]), os.sep+'Twisted') != -1:
 if hasattr(os, "getuid") and os.getuid() != 0:
     sys.path.insert(0, os.curdir)
 
-import cli.cli
+import manager.mgr
 
 def main():
-	c = cli.cli.Cli()
-	c.run()
+	m = manager.mgr.Mgr()
+	m.run()
 
 if __name__ == '__main__':
 	main()

@@ -1,0 +1,4 @@
+So here goes a few design thoughts...
+
+CLI
+The CLI is written in Python, mainly because Python is cool. It provides easy and rapid development 
