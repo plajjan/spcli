@@ -27,7 +27,7 @@ class Backend(threading.Thread):
     def run(self):
         pass
 
-class Cli(): # {{{
+class Cli():
     queue = Queue.Queue(0)
     use_rawinput = 1
     stop = None
@@ -49,7 +49,7 @@ class Cli(): # {{{
     ct_config.append("set")
     ct_config.append("status")
 
-    tree_config = [ # {{{
+    tree_config = [
             {   # abort (abort the current transaction
                 'tree_type' : 'branch',
                 'name'      : 'abort',
@@ -80,8 +80,8 @@ class Cli(): # {{{
                 'name'      : 'set'
             }
         ]
-    # }}}
-    tree_configuration = [ # {{{
+
+    tree_configuration = [
                 {   # firewall
                     'tree_type' : 'branch',
                     'name'      : 'firewall'
@@ -100,8 +100,8 @@ class Cli(): # {{{
                     'name': 'system'
                 }
             ]
-    # }}}
-    tree_operational =   [ # {{{
+
+    tree_operational =   [
                 {   # configure
                     'tree_type' : 'branch',
                     'name'      : 'configure',
@@ -178,26 +178,28 @@ class Cli(): # {{{
                     'shorthelp' : 'Log out from the CLI / router'
                 }
             ]
-    # }}}
 
 
-    def __init__(self): # {{{
+
+    def __init__(self):
         import sys
         self.stdin = sys.stdin
         self.stdout = sys.stdout
 
         self.prompt_update()
-    # }}}
 
-    def exit(self): # {{{
+
+
+    def exit(self):
         import sys
         if self.mode == 'operational':
             sys.exit(0);
         else:
             self.mode_operational()
-    # }}}
 
-    def prompt_update(self): # {{{
+
+
+    def prompt_update(self):
         import os
         username = os.environ.get('USER')
         if username == None:
@@ -208,34 +210,39 @@ class Cli(): # {{{
             self.prompt = self.prompt + "> "
         else:
             self.prompt = self.prompt + "# "
-    # }}}
 
-    def mode_configure(self): # {{{
+
+
+    def mode_configure(self):
         if self.mode == 'operational':
             print "Entering configuration mode"
             self.mode = 'configure'
             self.prompt_update()
-    # }}}
 
-    def mode_operational(self): # {{{
+
+
+    def mode_operational(self):
         if self.mode == 'configure':
             print "Exiting configuration mode"
             self.mode = 'operational'
             self.prompt_update()
-    # }}}
 
-    def pre_input_hook(self): # {{{
+
+
+    def pre_input_hook(self):
         pass
-    # }}}
 
-    def rprint(self, text): # {{{
+
+
+    def rprint(self, text):
         if text[-1] != '\n':
             text = text + " "
         self.stdout.write(text)
         self.stdout.flush()
-    # }}}
-    
-    def run(self): # {{{
+
+
+
+    def run(self):
         Backend(self.queue).start()
 
         if self.use_rawinput:
@@ -281,13 +288,16 @@ class Cli(): # {{{
                     readline.set_completer(self.old_completer)
                 except ImportError:
                     pass
-    # }}}
+
+
 
     def ping(self, value):
         print "TJOHEJ!"
         return
 
-    def evalcmd(self, opt_line): # {{{
+
+
+    def evalcmd(self, opt_line):
         from copy import copy
         import re
         line = re.sub(' $', '', opt_line)
@@ -315,24 +325,24 @@ class Cli(): # {{{
             print "No command available!"
         else:
             eval(data['command'])
-    # }}}
 
 
-    def precmd(self, line): # {{{
-        """
-        precmd is for doing any funky stuff before the line is parsed
+
+    def precmd(self, line):
+        """ precmd is for doing any funky stuff before the line is parsed
         """
         return line
-    # }}}
 
-    def postcmd(self, line): # {{{
-        """
-        postcmd is for doing any funky stuff after each parsed line
+
+
+    def postcmd(self, line):
+        """ postcmd is for doing any funky stuff after each parsed line
         """
         return None
-    # }}}
 
-    def tab_print(self, matches, num_matches, max_length): # {{{
+
+
+    def tab_print(self, matches, num_matches, max_length):
         print "in tab_print"
         import readline
         import re
@@ -348,9 +358,10 @@ class Cli(): # {{{
             self.rprint(self.prompt[0:-1] + " " + txt[0:-1])
         else:
             self.rprint(self.prompt[0:-1])
-    # }}}
 
-    def shorthelp_print(self, matches, num_matches, max_length): # {{{
+
+
+    def shorthelp_print(self, matches, num_matches, max_length):
         import readline
         from copy import copy
         raw_txt = readline.get_line_buffer()
@@ -390,9 +401,10 @@ class Cli(): # {{{
                         line = "  %-15s\n" % (i)
                     self.rprint(line)
         self.rprint(self.prompt + txt)
-    # }}}
 
-    def traverse(self, data, level, tokens, all_tokens): # {{{
+
+
+    def traverse(self, data, level, tokens, all_tokens):
         """
         data is the config tree given to us
         level is how far down we've dived into the tree
@@ -419,9 +431,10 @@ class Cli(): # {{{
 
         # fallback!
         return data
-    # }}}
 
-    def tab_complete(self, text, state): # {{{
+
+
+    def tab_complete(self, text, state):
         """Return the next possible completion for 'text'.
 
         This is called successively with state == 0, 1, 2, ... until it
@@ -509,7 +522,6 @@ class Cli(): # {{{
             return pc[state]
         except:
             return None
-    # }}}
 
 
 
@@ -532,5 +544,3 @@ class Cli(): # {{{
         self.proxy = Proxy('http://127.0.0.1:29999/XMLRPC')
         self.proxy.callRemote('echo', 'foo').addCallbacks(self.printValue, self.printError)
         reactor.run(installSignalHandlers=0)
-
-# }}}
