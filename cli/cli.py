@@ -2,12 +2,14 @@
 """A not so generic CLI library"""
 
 """
-TODO:   config file support
-        the actual nodes in the CLI tree should mostly come from a 
-        configuration of some sort. There would of course be built-ins like
-        'exit', 'configure' and so forth, but for example 'ping' in 
-        operational mode or all the configuration mode nodes should be read at
-        startup and merged with the built-ins
+=== TODO for operational mode ===
+TODO:   config file support for operational mode commands
+        ability to expand upon the builtin commands with new commands read from
+        configuration files
+
+=== TODO for configuration mode ===
+TODO:   implement edit / set / delete to modify the xml tree
+TODO:   all configuration mode nodes should come from configuration files
 
 TODO:   set the standard for branch / leaf / leaf-bool and so forth
 TODO:   introduce hidden nodes
@@ -36,155 +38,160 @@ class Cli():
 
     mode = 'operational'
 
-    ct_oper = []
-    ct_oper.append("quit")
-    ct_oper.append("configure")
-    ct_oper.append("ping")
-
-    ct_config = []
-    ct_config.append("abort")
-    ct_config.append("annotate")
-    ct_config.append("edit")
-    ct_config.append("quit")
-    ct_config.append("set")
-    ct_config.append("status")
-
-    tree_config = [
-            {   # abort (abort the current transaction
-                'tree_type' : 'branch',
-                'name'      : 'abort',
-                'shorthelp' : 'Abort the current transaction'
-            },
-            {   # delete
-                'tree_type' : 'branch',
-                'name'      : 'delete',
-                'kids'      : [ ]
-            },
-            {   # edit
-                'tree_type' : 'branch',
-                'name'      : 'edit'
-            },
-            {   # exit
-                'tree_type' : 'branch',
-                'name'      : 'exit',
-                'command'   : 'self.exit()',
-                'hidden'    : True
-            },
-            {   # quit
-                'tree_type' : 'branch',
-                'name'      : 'quit',
-                'command'   : 'self.exit()'
-            },
-            {   # set
-                'tree_type' : 'branch',
-                'name'      : 'set'
-            }
-        ]
-
-    tree_configuration = [
-                {   # firewall
-                    'tree_type' : 'branch',
-                    'name'      : 'firewall'
-                },
-                {   # interfaces
-                    'tree_type': 'branch',
-                    'name': 'interfaces',
-                    'shorthelp': 'Interface configuration'
-                },
-                {   # protocols
-                    'tree_type' : 'branch',
-                    'name': 'protocols'
-                },
-                {   # system
-                    'tree_type' : 'branch',
-                    'name': 'system'
-                }
-            ]
-
-    tree_operational =   [
-                {   # configure
-                    'tree_type' : 'branch',
-                    'name'      : 'configure',
-                    'command'   : 'self.mode_configure()',
-                    'shorthelp' : 'Enter configuration mode'
-                },
-                {   # exit
-                    'tree_type' : 'branch',
-                    'name'      : 'exit',
-                    'command'   : 'self.exit()',
-                    'hidden'    : True,
-                    'shorthelp' : ''
-                },
-                {   # logout
-                    'tree_type' : 'branch',
-                    'name'      : 'logout',
-                    'command'   : 'self.exit()',
-                    'hidden'    : True,
-                    'shorthelp' : ''
-                },
-                {   # ping
-                    'tree_type' : 'branch',
-                    'name'      : 'ping',
-                    'command'   : 'self.ping(tokens)',
-                    'shorthelp' : 'ping a host',
-                    'kids': [
-                                {   # host
-                                    'tree_type' : 'value',
-                                    'name'      : '<host>',
-                                    'value_type': [ 'host', 'ip', 'ip6' ],
-                                    'shorthelp' : 'Hostname or IP(v6) address of remote host'
-                                },
-                                {   # do-not-fragment
-                                    'tree_type' : 'leaf-bool',
-                                    'name'      : 'do-not-fragment',
-                                    'shorthelp' : 'Do not fragment the ICMP echo request packets'
-                                },
-                                {   # size
-                                    'tree_type' : 'leaf',
-                                    'name'      : 'size',
-                                    'shorthelp' : 'Size of ICMP echo request in bytes (+8 bytes of header)'
-                                },
-                                {   # ttl
-                                    'tree_type' : 'leaf',
-                                    'name'      : 'ttl',
-                                    'value_type': [ 'ttl' ],
-                                    'shorthelp' : 'TTL (hop-limit for IPv6)'
-                                }
-                            ]
-                },
-                {   # show
-                    'tree_type' : 'branch',
-                    'name'      : 'show',
-                    'shorthelp' : 'Show information'
-                },
-                {   # traceroute
-                    'tree_type' : 'branch',
-                    'name'      : 'traceroute',
-                    'command'   : 'self.traceroute(tokens)',
-                    'shorthelp' : 'trace the path to a host',
-                    'kids': [
-                                {   # host
-                                    'tree_type' : 'value',
-                                    'name'      : '<host>',
-                                    'value_type': [ 'host', 'ip', 'ip6' ],
-                                    'shorthelp' : 'Hostname or IP(v6) address of remote host'
-                                }
-                            ]
-                },
-                {   # quit
-                    'tree_type' : 'branch',
-                    'name'      : 'quit',
-                    'command'   : 'self.exit()',
-                    'shorthelp' : 'Log out from the CLI / router'
-                }
-            ]
-
-
 
     def __init__(self):
         import sys
         self.stdin = sys.stdin
         self.stdout = sys.stdout
+
+        self.ct_oper = []
+        self.ct_oper.append("quit")
+        self.ct_oper.append("configure")
+        self.ct_oper.append("ping")
+
+        self.ct_config = []
+        self.ct_config.append("abort")
+        self.ct_config.append("annotate")
+        self.ct_config.append("delete")
+        self.ct_config.append("edit")
+        self.ct_config.append("quit")
+        self.ct_config.append("rename")
+        self.ct_config.append("set")
+        self.ct_config.append("status")
+
+        self.tree_config = [
+                {   # abort (abort the current transaction
+                    'tree_type' : 'branch',
+                    'name'      : 'abort',
+                    'shorthelp' : 'Abort the current transaction'
+                },
+                {   # delete
+                    'tree_type' : 'branch',
+                    'name'      : 'delete',
+                    'shorthelp' : 'Delete a configuration node',
+                    'kids'      : [ ]
+                },
+                {   # edit
+                    'tree_type' : 'branch',
+                    'name'      : 'edit'
+                },
+                {   # exit
+                    'tree_type' : 'branch',
+                    'name'      : 'exit',
+                    'command'   : self.exit,
+                    'hidden'    : True
+                },
+                {   # quit
+                    'tree_type' : 'branch',
+                    'name'      : 'quit',
+                    'shorthelp' : 'Quit configure mode (and enter operational mode)',
+                    'command'   : self.exit
+                },
+                {   # set
+                    'tree_type' : 'branch',
+                    'shorthelp' : 'Set a value',
+                    'name'      : 'set'
+                }
+            ]
+
+        self.tree_configuration = [
+                    {   # firewall
+                        'tree_type' : 'branch',
+                        'name'      : 'firewall'
+                    },
+                    {   # interfaces
+                        'tree_type': 'branch',
+                        'name': 'interfaces',
+                        'shorthelp': 'Interface configuration'
+                    },
+                    {   # protocols
+                        'tree_type' : 'branch',
+                        'name': 'protocols'
+                    },
+                    {   # system
+                        'tree_type' : 'branch',
+                        'name': 'system'
+                    }
+                ]
+
+        self.tree_operational =   [
+                    {   # configure
+                        'tree_type' : 'branch',
+                        'name'      : 'configure',
+                        'command'   : self.mode_configure,
+                        'shorthelp' : 'Enter configuration mode'
+                    },
+                    {   # exit
+                        'tree_type' : 'branch',
+                        'name'      : 'exit',
+                        'command'   : self.exit,
+                        'hidden'    : True,
+                        'shorthelp' : ''
+                    },
+                    {   # logout
+                        'tree_type' : 'branch',
+                        'name'      : 'logout',
+                        'command'   : self.exit,
+                        'hidden'    : True,
+                        'shorthelp' : ''
+                    },
+                    {   # ping
+                        'tree_type' : 'branch',
+                        'name'      : 'ping',
+                        'command'   : self.ping,
+                        'shorthelp' : 'ping a host',
+                        'kids': [
+                                    {   # host
+                                        'tree_type' : 'value',
+                                        'name'      : '<host>',
+                                        'value_type': [ 'host', 'ip', 'ip6' ],
+                                        'shorthelp' : 'Hostname or IP(v6) address of remote host'
+                                    },
+                                    {   # do-not-fragment
+                                        'tree_type' : 'leaf-bool',
+                                        'name'      : 'do-not-fragment',
+                                        'shorthelp' : 'Do not fragment the ICMP echo request packets'
+                                    },
+                                    {   # size
+                                        'tree_type' : 'leaf',
+                                        'name'      : 'size',
+                                        'shorthelp' : 'Size of ICMP echo request in bytes (+8 bytes of header)'
+                                    },
+                                    {   # ttl
+                                        'tree_type' : 'leaf',
+                                        'name'      : 'ttl',
+                                        'value_type': [ 'ttl' ],
+                                        'shorthelp' : 'TTL (hop-limit for IPv6)'
+                                    }
+                                ]
+                    },
+                    {   # show
+                        'tree_type' : 'branch',
+                        'name'      : 'show',
+                        'shorthelp' : 'Show information'
+                    },
+                    {   # traceroute
+                        'tree_type' : 'branch',
+                        'name'      : 'traceroute',
+                        'command'   : self.run_external,
+                        'shorthelp' : 'trace the path to a host',
+                        'kids': [
+                                    {   # host
+                                        'tree_type' : 'value',
+                                        'name'      : '<host>',
+                                        'value_type': [ 'host', 'ip', 'ip6' ],
+                                        'shorthelp' : 'Hostname or IP(v6) address of remote host'
+                                    }
+                                ]
+                    },
+                    {   # quit
+                        'tree_type' : 'branch',
+                        'name'      : 'quit',
+                        'command'   : self.exit,
+                        'shorthelp' : 'Log out from the CLI / router'
+                    }
+                ]
+
 
         self.prompt_update()
 
@@ -196,6 +203,10 @@ class Cli():
             sys.exit(0);
         else:
             self.mode_operational()
+
+
+    def run_external(self):
+        print "tjohej"
 
 
 
@@ -310,21 +321,19 @@ class Cli():
         if opt_line == 'ping':
             print "TJOHEJSAN!"
 #            threads.blockingCallFromThread(reactor, self.runFunc, 'echo', 'test')
-            self.nrun()
+            #self.nrun()
 
         if self.mode == 'operational':
             data = self.traverse(self.tree_operational, 1, tokens, all_tokens)
         else:
             data = self.traverse(self.tree_config, 1, tokens, all_tokens)
 
-        print "Data", data['command']
-
         try:
             command = data['command']
         except:
-            print "No command available!"
+            print "No such command available!"
         else:
-            eval(data['command'])
+            data['command']()
 
 
 
