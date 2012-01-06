@@ -427,8 +427,7 @@ class Cli():
         if len(tokens) == 0:
             return data
 
-        # 
-#        ct = tokens.pop(0)
+        # TODO: explain this
         ct = tokens[0]
         for obj in data:
             if obj['tree_type'] == 'branch' and obj['name'] == ct:
@@ -524,8 +523,6 @@ class Cli():
         for val in ac:
             if val[0:len(text)] == text:
                 pc.append(val)
-#            if val.find(text) != -1:
-#                pc.append(val + " ")
 
         try:
             return pc[state]
